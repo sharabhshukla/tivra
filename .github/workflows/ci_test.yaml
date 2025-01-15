@@ -31,18 +31,15 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}  # Use Python version from the matrix
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
       # Step 3: Install dependencies
       - name: Install dependencies
         run: |
-          # Upgrade the 'uv' tool
-          python -m pip install --upgrade uv
           
           # Synchronize dependencies or perform additional setup
           uv sync --extra dev
-          
-          # add dev dependencies
-          uv add pytest
-
 
       # Step 4: Run pytest
       - name: Run tests with pytest

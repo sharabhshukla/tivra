@@ -36,12 +36,9 @@ jobs:
 
       # Step 3: Install dependencies
       - name: Install dependencies
-        run: |
-          
-          # Synchronize dependencies or perform additional setup
-          uv sync --extra dev
+        run: uv sync --extra dev # Synchronize dependencies or perform additional setup
 
       # Step 4: Run pytest
       - name: Run tests with pytest
         run: |
-          pytest --maxfail=5 --disable-warnings -v
+          uv run pytest

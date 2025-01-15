@@ -3,7 +3,7 @@ name = "tivra"
 version = "0.1.0"
 description = "Tivra, a fast and agile solver based on PDHG, capable of running on multiple hardware accelerators"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.10, <=3.12"
 dependencies = [
     "highspy>=1.9.0",
     "pyomo>=6.8.2",

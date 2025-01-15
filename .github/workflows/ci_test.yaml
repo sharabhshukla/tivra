@@ -36,9 +36,6 @@ jobs:
         run: |
           # Upgrade the 'uv' tool
           python -m pip install --upgrade uv
-    
-          # Install dependencies defined in pyproject.toml
-          uv install
           
           # Synchronize dependencies or perform additional setup
           uv sync

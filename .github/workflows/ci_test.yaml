@@ -39,6 +39,9 @@ jobs:
           
           # Synchronize dependencies or perform additional setup
           uv sync
+          
+          # add dev dependencies
+          uv add pytest
 
 
       # Step 4: Run pytest

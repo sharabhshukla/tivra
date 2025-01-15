@@ -34,8 +34,15 @@ jobs:
       # Step 3: Install dependencies
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          # Upgrade the 'uv' tool
+          python -m pip install --upgrade uv
+    
+          # Install dependencies defined in pyproject.toml
+          uv install
+          
+          # Synchronize dependencies or perform additional setup
+          uv sync
+
 
       # Step 4: Run pytest
       - name: Run tests with pytest

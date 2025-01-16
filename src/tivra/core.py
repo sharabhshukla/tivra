@@ -3,6 +3,22 @@ import torch
 from tivra.extractor import PyomoExtractor
 from tivra.utils.pyomo_generator import create_large_lp
 from tivra.device import TivraAccelerator, get_torch_device
+import logging
+
+
+# Create a custom logger
+logger = logging.getLogger("PDHG Logger")
+logger.setLevel(logging.INFO)
+
+# Create a handler for console output
+console_handler = logging.StreamHandler()
+
+# Define a custom format
+formatter = logging.Formatter("[PDHG] %(message)s")  # Only display the message with your prefix
+console_handler.setFormatter(formatter)
+
+# Add the handler to the logger
+logger.addHandler(console_handler)
 
 class TivraSolver:
     """
@@ -136,7 +152,7 @@ class TivraSolver:
         sigma = 1.0 / L
 
         # Initialize primal and dual variables
-        x = torch.rand(var_lb.size(), device=var_lb.device, dtype=self.data_type)
+        x = torch.rand(n, device=var_lb.device, dtype=self.data_type)
         x_old = torch.zeros_like(x)
         y = torch.zeros(m, device=self.device, dtype=self.data_type)
 
@@ -157,16 +173,19 @@ class TivraSolver:
             norm_diff = torch.norm(x - x_old)
             denom = 1.0 + torch.norm(x)
             if (norm_diff / denom) < self.tol:
-                if self.verbose:
-                    print(f"[PDHG] Converged at iteration {k+1}")
+                logger.info("######PDHG Solver Info###################")
+                logger.info(f"[PDHG] Converged at iteration {k+1}")
+                logger.info(f"[PDHG] current objective is {c @ x}")
+                logger.info(f"[PDHG] norm diff is {norm_diff}")
+                logger.info(f"########################################")
                 break
 
             y = y_new  # update dual
 
             # Optional progress info
-            if self.verbose and (k+1) % self.logging_interval == 100:
+            if self.verbose and (k+1) % self.logging_interval == 20:
                 obj_val = torch.dot(c, x).item()
-                print(f"Iter {k+1}:  obj={obj_val:.6g}, step_diff={norm_diff:.3e}")
+                logger.info(f"Iter {k+1}:  obj={obj_val:.6g}, step_diff={norm_diff:.3e}")
         # transfer torch tensor to cpu before returning
         x = x.detach().cpu().numpy()
 
@@ -181,7 +200,7 @@ if __name__ == "__main__":
     torch.manual_seed(0)
     model, exact_solution = create_large_lp(num_vars=100, var_bound=(0,1))
 
-    solver = TivraSolver(max_iter=2000, tol=1e-7, theta=1.0, verbose=True, accelerator=TivraAccelerator.CPU)
+    solver = TivraSolver(max_iter=2000, tol=1e-7, theta=1.0, verbose=False, accelerator=TivraAccelerator.CPU)
     x_solver_sol = solver.solve(model)
 
     print("\nSolution x =", x_solver_sol)

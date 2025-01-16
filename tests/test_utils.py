@@ -7,15 +7,17 @@ from unittest.mock import patch
 
 # Test CPU accelerator case
 def test_cpu_device():
-    device = get_torch_device(TivraAccelerator.CPU)
+    device, data_type = get_torch_device(TivraAccelerator.CPU)
     assert device == torch.device("cpu")
+    assert data_type == torch.float64
 
 
 # Test MPS (Metal Performance Shaders) available case
 @patch("torch.backends.mps.is_available", return_value=True)
 def test_mps_device(mock_mps_available):
-    device = get_torch_device(TivraAccelerator.MPS)
+    device, data_type = get_torch_device(TivraAccelerator.MPS)
     assert device == torch.device("mps")
+    assert data_type == torch.float32
     mock_mps_available.assert_called_once()
 
 
@@ -30,8 +32,9 @@ def test_mps_device_unavailable(mock_mps_available):
 # Test CUDA available case
 @patch("torch.cuda.is_available", return_value=True)
 def test_cuda_device(mock_cuda_available):
-    device = get_torch_device(TivraAccelerator.CUDA)
+    device, data_type = get_torch_device(TivraAccelerator.CUDA)
     assert device == torch.device("cuda")
+    assert data_type == torch.float32
     mock_cuda_available.assert_called_once()
 
 

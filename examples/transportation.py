@@ -1,6 +1,6 @@
 # Import necessary libraries
 from pyomo.environ import ConcreteModel, Set, Param, Var, NonNegativeReals, Objective, Constraint, SolverFactory, value
-from tivra import TivraSolver
+from tivra import TivraSolver, TivraAccelerator
 
 # Create a Concrete Model
 model = ConcreteModel()
@@ -77,6 +77,6 @@ for o in model.origins:
 print(f"\nTotal Transportation Cost: {value(model.total_cost)}")
 print("Now, running PDHG")
 
-tivra_solver = TivraSolver(tol=1e-8, max_iter=8000, theta=0.5, verbose=True)
+tivra_solver = TivraSolver(tol=1e-8, max_iter=8000, theta=0.5, verbose=True, accelerator=TivraAccelerator.CUDA)
 x = tivra_solver.solve(model)
 print(x)

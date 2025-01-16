@@ -1,10 +1,9 @@
-from unittest.result import failfast
-
 import pytest
 import torch
 from tivra.core import TivraAccelerator
-from tivra.utils import get_torch_device
-from unittest.mock import patch, MagicMock
+from tivra.device import get_torch_device
+from unittest.mock import patch
+
 
 # Test CPU accelerator case
 def test_cpu_device():

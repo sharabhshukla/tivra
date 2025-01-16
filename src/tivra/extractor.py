@@ -149,7 +149,7 @@ if __name__ == "__main__":
     model.con1 = Constraint(expr=2 * model.x[0] + model.x[1] <= 10)
     model.con2 = Constraint(expr=3 * model.x[1] - model.x[2] <= 5)
     model.con3 = Constraint(expr=model.x[0] + model.x[2] <= 7)
-    model.con4 = Constraint(expr=-model.x[0] + 4 * model.x[1] >= 3)
+    model.con4 = Constraint(expr=-model.x[0] + 4 * model.x[1] == 3)
     model.con5 = Constraint(expr=5 * model.x[2] >= 15)
 
     # Objective

@@ -1,14 +1,8 @@
-from enum import Enum
+from typing import Optional
 import torch
-
-
-class TivraAccelerator(str, Enum):
-    CPU = "cpu"
-    MPS = "mps"
-    CUDA = "cuda"
-    XPU = "xpu"
-    HPU = "hpu"
-
+from tivra.extractor import PyomoExtractor
+from tivra.utils.pyomo_generator import create_large_lp
+from tivra.device import TivraAccelerator, get_torch_device
 
 class TivraSolver:
     """
@@ -23,7 +17,8 @@ class TivraSolver:
                  theta=1.0,
                  verbose=False,
                  logging_interval: int = 50,
-                 device: torch.device = torch.device("cpu")):
+                 accelerator: Optional[TivraAccelerator] = TivraAccelerator.CPU,
+                 data_type: torch.dtype = torch.float64):
         """
         Initialize PDHG solver parameters.
 
@@ -40,18 +35,28 @@ class TivraSolver:
         device : str or torch.device, optional
             Device to place tensors on, e.g. 'cpu' or 'cuda'. If None, defaults to CPU.
         """
+
         self.max_iter = max_iter
         self.tol = tol
         self.theta = theta
         self.verbose = verbose
         self.logging_interval = logging_interval
-        self.device = device if device is not None else torch.device('cpu')
+        self.device, self.data_type = get_torch_device(accelerator)
 
-    def _prox_f(self, v, tau, c):
+    def _prox_f(self, v, tau, c, var_lb=None, var_ub=None):
         """
         Prox of f(x) = c^T x is the affine shift: v - tau*c.
         """
-        return v - tau * c
+        # Affine shift for the objective
+        x_tilde = v - tau * c
+
+        # Projection onto variable bounds
+        if var_lb is not None:
+            x_tilde = torch.maximum(x_tilde, var_lb)
+        if var_ub is not None:
+            x_tilde = torch.minimum(x_tilde, var_ub)
+
+        return x_tilde
 
     def _prox_g_star(self, v, sigma, b_min, b_max):
         """
@@ -78,7 +83,7 @@ class TivraSolver:
         """
         return x_k + self.theta * (x_k - x_k_minus_1)
 
-    def solve(self, A, b_min, b_max, c):
+    def solve(self, model, *args, **kwargs):
         """
         Solve the LP:  min c^T x  subject to  b_min <= A x <= b_max
         using the PDHG method.
@@ -100,18 +105,32 @@ class TivraSolver:
             Approximate minimizer of the LP.
         """
 
+        if "max_iter" in kwargs:
+            self.max_iter = kwargs["max_iter"]
+        extractor = PyomoExtractor(model)
+        # A -> Constraint matrix
+        # c -> cost coefficient
+        # b_lower -> lower bound constraint on constraint
+        # b_upper -> upper bounds on constraint
+        # lb -> lower bounds on vars
+        # ub -> upper bounds on vars
+        A, c, b_lower, b_upper, senses, lb, ub = extractor.extract_all()
+
+
         # Ensure all inputs are on the desired device
-        A = A.to(self.device)
-        b_min = b_min.to(self.device)
-        b_max = b_max.to(self.device)
-        c = c.to(self.device)
+        A = torch.tensor(A, device=self.device, dtype=torch.float32)
+        b_min = torch.tensor(b_lower, device=self.device, dtype=torch.float32)
+        b_max = torch.tensor(b_upper, device=self.device, dtype=torch.float32)
+        c = torch.tensor(c, device=self.device, dtype=torch.float32)
+        var_lb = torch.tensor(lb, device=self.device, dtype=torch.float32)
+        var_ub = torch.tensor(ub, device=self.device, dtype=torch.float32)
 
         m, n = A.shape
 
         # Estimate spectral norm of A (largest singular value)
         # (Alternatively, one could do an iterative power-method approach.)
         # We use torch.linalg.svdvals(A).max() to get the spectral norm.
-        L = torch.linalg.svdvals(A).max()
+        L = torch.linalg.norm(A, 2)
 
         tau = 1.0 / L
         sigma = 1.0 / L
@@ -132,7 +151,7 @@ class TivraSolver:
             # 3) Primal update: x <- prox_{tau*f}( x - tau * A^T * y_new )
             x_old.copy_(x)  # keep a copy for the next extrapolation
             x_in = x - tau * torch.matmul(A.t(), y_new)
-            x = self._prox_f(x_in, tau, c)
+            x = self._prox_f(x_in, tau, c, var_lb, var_ub)
 
             # 4) Check a simple stopping criterion
             norm_diff = torch.norm(x - x_old)
@@ -148,6 +167,8 @@ class TivraSolver:
             if self.verbose and (k+1) % self.logging_interval == 0:
                 obj_val = torch.dot(c, x).item()
                 print(f"Iter {k+1}:  obj={obj_val:.6g}, step_diff={norm_diff:.3e}")
+        # transfer torch tensor to cpu before returning
+        x = x.detach().cpu().numpy()
 
         return x
 
@@ -158,21 +179,12 @@ if __name__ == "__main__":
 
     # For reproducibility
     torch.manual_seed(0)
+    model, exact_solution = create_large_lp(num_vars=100, var_bound=(0,1))
 
-    # Create random problem data on CPU
-    m, n = 5, 3
-    A_ = torch.randn(m, n, dtype=torch.double)
-    b_min_ = -0.5 * torch.ones(m, dtype=torch.double)
-    b_max_ = +1.0 * torch.ones(m, dtype=torch.double)
-    c_ = torch.tensor([1.0, 2.0, -0.5], dtype=torch.double)
+    solver = TivraSolver(max_iter=2000, tol=1e-7, theta=1.0, verbose=True, accelerator=TivraAccelerator.CPU)
+    x_solver_sol = solver.solve(model)
 
-    solver = TivraSolver(max_iter=2000, tol=1e-7, theta=1.0, verbose=True, device='cpu')
-    x_sol = solver.solve(A_, b_min_, b_max_, c_)
+    print("\nSolution x =", x_solver_sol)
+    print("Exact Solution")
+    print(exact_solution)
 
-    print("\nSolution x =", x_sol)
-    print("Objective c^T x =", torch.dot(c_, x_sol).item())
-    Ax_ = torch.matmul(A_, x_sol)
-    print("Check constraints b_min <= A x <= b_max ?")
-    print("  A x =", Ax_.cpu().numpy())
-    print("  b_min =", b_min_.cpu().numpy())
-    print("  b_max =", b_max_.cpu().numpy())

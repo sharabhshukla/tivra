@@ -9,6 +9,7 @@ class TivraAccelerator(str, Enum):
     CUDA = "cuda"
     XPU = "xpu"
     HPU = "hpu"
+    TPU = "xla"
 
 def get_torch_device(accelerator: TivraAccelerator) -> Tuple[torch.device, torch.dtype]:
     """Return the appropriate PyTorch device based on the accelerator type."""
@@ -42,6 +43,14 @@ def get_torch_device(accelerator: TivraAccelerator) -> Tuple[torch.device, torch
             raise ValueError(
                 "HPU (Habana) backend is not available on this system. Ensure Habana drivers and PyTorch HPU extensions are installed.")
 
+    elif accelerator == TivraAccelerator.TPU:
+        try:
+            import torch_xla
+            import torch_xla.core.xla_model as xm
+        except ImportError:
+            raise ValueError("TPU backend is not available on this system.")
+        if hasattr(torch_xla, "xla") and torch.xla.is_available():
+            return xm.xla_device(), torch.float32
 
     else:
         raise ValueError(f"Unknown accelerator type: {accelerator}")

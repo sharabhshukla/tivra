@@ -118,12 +118,12 @@ class TivraSolver:
 
 
         # Ensure all inputs are on the desired device
-        A = torch.tensor(A, device=self.device, dtype=torch.float32)
-        b_min = torch.tensor(b_lower, device=self.device, dtype=torch.float32)
-        b_max = torch.tensor(b_upper, device=self.device, dtype=torch.float32)
-        c = torch.tensor(c, device=self.device, dtype=torch.float32)
-        var_lb = torch.tensor(lb, device=self.device, dtype=torch.float32)
-        var_ub = torch.tensor(ub, device=self.device, dtype=torch.float32)
+        A = torch.tensor(A, device=self.device, dtype=self.data_type)
+        b_min = torch.tensor(b_lower, device=self.device, dtype=self.data_type)
+        b_max = torch.tensor(b_upper, device=self.device, dtype=self.data_type)
+        c = torch.tensor(c, device=self.device, dtype=self.data_type)
+        var_lb = torch.tensor(lb, device=self.device, dtype=self.data_type)
+        var_ub = torch.tensor(ub, device=self.device, dtype=self.data_type)
 
         m, n = A.shape
 
@@ -136,9 +136,9 @@ class TivraSolver:
         sigma = 1.0 / L
 
         # Initialize primal and dual variables
-        x = torch.zeros(n, device=self.device, dtype=A.dtype)
+        x = torch.rand(var_lb.size(), device=var_lb.device, dtype=self.data_type)
         x_old = torch.zeros_like(x)
-        y = torch.zeros(m, device=self.device, dtype=A.dtype)
+        y = torch.zeros(m, device=self.device, dtype=self.data_type)
 
         for k in range(self.max_iter):
             # 1) Extrapolate: overline{x}^k
@@ -164,7 +164,7 @@ class TivraSolver:
             y = y_new  # update dual
 
             # Optional progress info
-            if self.verbose and (k+1) % self.logging_interval == 0:
+            if self.verbose and (k+1) % self.logging_interval == 100:
                 obj_val = torch.dot(c, x).item()
                 print(f"Iter {k+1}:  obj={obj_val:.6g}, step_diff={norm_diff:.3e}")
         # transfer torch tensor to cpu before returning

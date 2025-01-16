@@ -20,3 +20,6 @@ dev = [
 pythonpath = [
   "src"
 ]
+
+[tool.setuptools]
+license-files = []

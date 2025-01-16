@@ -77,6 +77,6 @@ for o in model.origins:
 print(f"\nTotal Transportation Cost: {value(model.total_cost)}")
 print("Now, running PDHG")
 
-tivra_solver = TivraSolver(tol=1e-8, max_iter=8000, theta=0.5, verbose=True, accelerator=TivraAccelerator.CUDA)
+tivra_solver = TivraSolver(tol=1e-8, max_iter=8000, theta=0.5, verbose=True, accelerator=TivraAccelerator.CPU)
 x = tivra_solver.solve(model)
 print(x)

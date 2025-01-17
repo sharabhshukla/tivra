@@ -12,23 +12,6 @@ def test_cpu_device():
     assert data_type == torch.float64
 
 
-# Test MPS (Metal Performance Shaders) available case
-@patch("torch.backends.mps.is_available", return_value=True)
-def test_mps_device(mock_mps_available):
-    device, data_type = get_torch_device(TivraAccelerator.MPS)
-    assert device == torch.device("mps")
-    assert data_type == torch.float32
-    mock_mps_available.assert_called_once()
-
-
-# Test MPS unavailable case
-@patch("torch.backends.mps.is_available", return_value=False)
-def test_mps_device_unavailable(mock_mps_available):
-    with pytest.raises(ValueError, match="MPS \\(Metal\\) backend is not available on this system."):
-        get_torch_device(TivraAccelerator.MPS)
-    mock_mps_available.assert_called_once()
-
-
 # Test CUDA available case
 @patch("torch.cuda.is_available", return_value=True)
 def test_cuda_device(mock_cuda_available):

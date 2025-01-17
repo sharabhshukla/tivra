@@ -5,7 +5,6 @@ import torch
 
 class TivraAccelerator(str, Enum):
     CPU = "cpu"
-    MPS = "mps"
     CUDA = "cuda"
     XPU = "xpu"
     HPU = "hpu"
@@ -17,11 +16,6 @@ def get_torch_device(accelerator: TivraAccelerator) -> Tuple[torch.device, torch
     if accelerator == TivraAccelerator.CPU:
         return torch.device("cpu"), torch.float64
 
-    elif accelerator == TivraAccelerator.MPS:
-        if torch.backends.mps.is_available():
-            return torch.device("mps"), torch.float32
-        else:
-            raise ValueError("MPS (Metal) backend is not available on this system.")
 
     elif accelerator == TivraAccelerator.CUDA:
         if torch.cuda.is_available():

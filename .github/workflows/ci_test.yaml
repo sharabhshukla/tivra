@@ -27,7 +27,7 @@ jobs:
 
       # Step 2: Setup Python from matrix
       - name: Setup Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}  # Use Python version from the matrix
 
